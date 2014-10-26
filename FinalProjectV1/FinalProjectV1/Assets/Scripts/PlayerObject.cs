@@ -31,44 +31,100 @@ public class PlayerObject : MonoBehaviour {
 	Vector3 curTopLeftCornerPos;
 	Vector3 prevTopLeftCornerPos;
 	Vector3 prevTopRightCornerPos;
-	
+
+	bool jumpQueued;
+
 	// Use this for initialization
 	void Start () {
 		P = this;
 		RestoreDefaults ();
+		playing = true;
+
+		jumpQueued = false;
 	}
 	
 	// Update is called once per frame
 	void Update () {
-
+		if (Input.GetButton ("Jump")) {
+			jumpQueued = true;
+		}
 	}
-	
+
+	void handleXMovement(){
+		float xMovement = Input.GetAxisRaw("Horizontal");
+		Vector3 pos = this.transform.position;
+		Vector3 change = new Vector3 (0, 0);
+		
+		float horizontalChange = 0.15f;
+		
+		if(xMovement > 0){
+			change.x = horizontalChange;
+		}
+		else if(xMovement < 0){
+			change.x = -horizontalChange;
+		}
+
+		//if i'm on a wall and going in that direction don't
+		//have any change
+		if(rightWallList.Count != 0 && change.x > 0){
+			change.x = 0;
+		}
+		if(leftWallList.Count != 0 && change.x < 0){
+			change.x = 0;
+		}
+
+		pos = pos + (change);
+
+		this.transform.position = pos;
+	}
+
+	void handleYMovement (){
+		if(jumpQueued && groundList.Count != 0){
+			Jump ();
+			jumpQueued = false;
+		}
+		else{
+			jumpQueued = false;
+		}
+	}
+
 	void FixedUpdate(){
 		if(playing){
+			handleXMovement();
+			handleYMovement();
+
 			Vector3 pos = this.transform.position;
 			float oldXSpeed = velocity.x;
-			
+
 			//Apply gravity if the player is not on a platform.
 			if(groundList.Count == 0){
 				velocity += playerGravity * Time.deltaTime;
 			}
-			
+
+			//I moved this to the handle X function.  Also am not modifying
+			//x velocity anymore becaues the player is moving based on input
+			//so it won't have a velocity to keep moving.  I'm just going to
+			//check if's encountered a wall and just set it's x change to 0.
+			/*
 			if(rightWallList.Count != 0 && velocity.x > 0){
 				velocity.x = 0;
 			}
 			if(leftWallList.Count != 0 && velocity.x < 0){
 				velocity.x = 0;
 			}
-			
-			
+			*/
+			//applies the gravity here
 			pos += velocity * Time.deltaTime;
 			this.transform.position = pos;
 			currentLinePosition = pos;
 			velocity.x = oldXSpeed;
-			
+
+			//don't need this anymore I think
+			/*
 			if (this && LevelLoader.ll && this.transform.position.y <= -4.0f) {
 				RestoreDefaults();
 			}
+			*/
 		}
 		prevGroundLeftCornerPos = curGroundLeftCornerPos;
 		prevGroundRightCornerPos = curGroundRightCornerPos;
@@ -82,7 +138,7 @@ public class PlayerObject : MonoBehaviour {
 	}
 	
 	public void OnTriggerEnter(Collider other){
-		
+
 		if(!other.GetComponent<GroundObject>()){
 			return;
 		}
@@ -95,7 +151,7 @@ public class PlayerObject : MonoBehaviour {
 		if(leftWallList.Contains(other)){
 			return;
 		}
-		
+
 		if(playerGravity.y < 0){
 			gravityDirection = -1;
 		} else {
@@ -262,8 +318,8 @@ public class PlayerObject : MonoBehaviour {
 		leftWallList = new List<Collider> ();
 		velocity = Vector3.zero;
 		
-		velocity.x = xSpeed;
-		playing = false;
+		//velocity.x = xSpeed;
+		//playing = false;
 		hitGroundTimer = 0;
 		currentLinePosition = this.transform.position;	
 	}

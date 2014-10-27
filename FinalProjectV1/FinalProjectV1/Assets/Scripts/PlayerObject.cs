@@ -34,6 +34,15 @@ public class PlayerObject : MonoBehaviour {
 
 	bool jumpQueued;
 
+
+	//SCOTT AND MATT SHOOTING STUFF
+	public GameObject leftBullet;
+	public GameObject rightBullet;
+	public GameObject jumpBullet;
+	public GameObject currentBullet;
+	int facing = 0;
+
+
 	// Use this for initialization
 	void Start () {
 		P = this;
@@ -48,6 +57,51 @@ public class PlayerObject : MonoBehaviour {
 		if (Input.GetButton ("Jump")) {
 			jumpQueued = true;
 		}
+
+
+
+
+
+		//SCOTT AND MATT
+		if(Input.GetKeyDown("j")){
+			currentBullet = Instantiate (leftBullet) as GameObject;
+			if (facing == 1) {
+				currentBullet.transform.position = transform.position;
+				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
+				
+			}
+			
+			if (facing == -1) {
+				currentBullet.transform.position = transform.position;
+				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
+			}
+		}
+		else if(Input.GetKeyDown("l")){
+			currentBullet = Instantiate (rightBullet) as GameObject;
+			if (facing == 1) {
+				currentBullet.transform.position = transform.position;
+				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
+				
+			}
+			
+			if (facing == -1) {
+				currentBullet.transform.position = transform.position;
+				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
+			}
+		}
+		else if(Input.GetKeyDown("i")){
+			currentBullet = Instantiate (jumpBullet) as GameObject;
+			if (facing == 1) {
+				currentBullet.transform.position = transform.position;
+				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
+				
+			}
+			
+			if (facing == -1) {
+				currentBullet.transform.position = transform.position;
+				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
+			}
+		}
 	}
 
 	void handleXMovement(){
@@ -59,9 +113,13 @@ public class PlayerObject : MonoBehaviour {
 		
 		if(xMovement > 0){
 			change.x = horizontalChange;
+			facing = 1;
+				print(facing);
 		}
 		else if(xMovement < 0){
 			change.x = -horizontalChange;
+			facing = -1;
+				print(facing);
 		}
 
 		//if i'm on a wall and going in that direction don't

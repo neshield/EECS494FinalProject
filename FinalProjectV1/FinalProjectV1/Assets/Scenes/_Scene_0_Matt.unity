@@ -269,7 +269,7 @@ Rigidbody:
   m_Mass: 1
   m_Drag: 0
   m_AngularDrag: .0500000007
-  m_UseGravity: 0
+  m_UseGravity: 1
   m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 120
@@ -301,7 +301,7 @@ BoxCollider:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1114145782}
   m_Material: {fileID: 0}
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 1, y: 1, z: 1}
@@ -347,8 +347,8 @@ GameObject:
   - 33: {fileID: 1252926922}
   - 65: {fileID: 1252926921}
   - 23: {fileID: 1252926920}
-  - 54: {fileID: 1252926924}
   - 114: {fileID: 1252926919}
+  - 54: {fileID: 1252926924}
   m_Layer: 8
   m_Name: Player
   m_TagString: Untagged
@@ -364,22 +364,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 1252926918}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 782b3c047d6e55d47844d60a6bda72ae, type: 3}
+  m_Script: {fileID: 11500000, guid: 36eaabe3eb2acaa4a8e9aae6b3cfae1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   startPosition: {x: 0, y: 0, z: 0}
   velocity: {x: 0, y: 0, z: 0}
-  currentLinePosition: {x: 0, y: 0, z: 0}
   xSpeed: 4
   jumpSpeed: 12
   playing: 0
   groundList: []
   leftWallList: []
   rightWallList: []
-  gravityDirection: -1
-  leftBullet: {fileID: 0}
-  rightBullet: {fileID: 0}
-  jumpBullet: {fileID: 0}
+  leftBullet: {fileID: 100000, guid: 730ea3952ee3f4d359f1f08be6f9df14, type: 2}
+  rightBullet: {fileID: 100000, guid: 20db75dc073134b7c879b8bece812429, type: 2}
+  jumpBullet: {fileID: 100000, guid: 28ec9cea660274ad38476c7977e184c8, type: 2}
   currentBullet: {fileID: 0}
 --- !u!23 &1252926920
 Renderer:

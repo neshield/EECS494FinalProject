@@ -2,27 +2,18 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class PlayerObject : MonoBehaviour {
-	static public PlayerObject P;
-	
-	public Vector3 startPosition;
-	public Vector3 velocity;
-	public Vector3 currentLinePosition;
-	public float xSpeed = 4.0f; //HAVE TO CHANGE THIS IN INSPECTOR, DINGUS! 4.0 seems good
-	public float jumpSpeed = 12.0f;
-	public static Vector3 playerGravity = new Vector3(0.0f, -15f, 0.0f);
-	
-	public bool playing;
-	
+public class DummyScriptNathan : MonoBehaviour {
+
 	public List<Collider> groundList;
 	public List<Collider> leftWallList;
 	public List<Collider> rightWallList;
-	
-	bool ________________________________________;
-	//Physics stuff
+
 	public int gravityDirection = -1;
 	private int hitGroundTimer = 0;
-	
+
+	public static Vector3 playerGravity = new Vector3(0.0f, -15f, 0.0f);
+	public Vector3 velocity;
+
 	Vector3	curGroundRightCornerPos;
 	Vector3 curGroundLeftCornerPos;
 	Vector3 prevGroundLeftCornerPos;
@@ -31,159 +22,32 @@ public class PlayerObject : MonoBehaviour {
 	Vector3 curTopLeftCornerPos;
 	Vector3 prevTopLeftCornerPos;
 	Vector3 prevTopRightCornerPos;
-	
-	bool jumpQueued;
-	
-	
-	//SCOTT AND MATT SHOOTING STUFF
-	public GameObject leftBullet;
-	public GameObject rightBullet;
-	public GameObject jumpBullet;
-	public GameObject currentBullet;
-	int facing = 0;
-	
-	
+
 	// Use this for initialization
 	void Start () {
-		P = this;
-		RestoreDefaults ();
-		playing = true;
-		
-		jumpQueued = false;
+	
 	}
 	
 	// Update is called once per frame
-	void Update () {
-		if (Input.GetButton ("Jump")) {
-			jumpQueued = true;
-		}
-		
-		
-		
-		
-		
-		//SCOTT AND MATT
-		if(Input.GetKeyDown("j")){
-			currentBullet = Instantiate (leftBullet) as GameObject;
-			if (facing == 1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
-				
-			}
-			
-			if (facing == -1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
-			}
-		}
-		else if(Input.GetKeyDown("l")){
-			currentBullet = Instantiate (rightBullet) as GameObject;
-			if (facing == 1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
-				
-			}
-			
-			if (facing == -1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
-			}
-		}
-		else if(Input.GetKeyDown("i")){
-			currentBullet = Instantiate (jumpBullet) as GameObject;
-			if (facing == 1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
-				
-			}
-			
-			if (facing == -1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
-			}
-		}
-	}
-	
-	void handleXMovement(){
-		float xMovement = Input.GetAxisRaw("Horizontal");
+	void FixedUpdate () {
 		Vector3 pos = this.transform.position;
-		Vector3 change = new Vector3 (0, 0);
-		
-		float horizontalChange = 0.15f;
-		
-		if(xMovement > 0){
-			change.x = horizontalChange;
-			facing = 1;
-			print(facing);
+
+		if(groundList.Count == 0){
+			velocity += playerGravity * Time.deltaTime;
 		}
-		else if(xMovement < 0){
-			change.x = -horizontalChange;
-			facing = -1;
-			print(facing);
+
+		//Slow horizontal movement
+		if (velocity.x > 0.0f) {
+			velocity += new Vector3 (-0.5f, 0.0f, 0.0f);
+		}
+		if (velocity.x < 0.0f) {
+			velocity += new Vector3 (0.5f, 0.0f, 0.0f);
 		}
 		
-		//if i'm on a wall and going in that direction don't
-		//have any change
-		if(rightWallList.Count != 0 && change.x > 0){
-			change.x = 0;
-		}
-		if(leftWallList.Count != 0 && change.x < 0){
-			change.x = 0;
-		}
-		
-		pos = pos + (change);
-		
+		//applies the gravity here
+		pos += velocity * Time.deltaTime;
 		this.transform.position = pos;
-	}
-	
-	void handleYMovement (){
-		if(jumpQueued && groundList.Count != 0){
-			Jump ();
-			jumpQueued = false;
-		}
-		else{
-			jumpQueued = false;
-		}
-	}
-	
-	void FixedUpdate(){
-		if(playing){
-			handleXMovement();
-			handleYMovement();
-			
-			Vector3 pos = this.transform.position;
-			float oldXSpeed = velocity.x;
-			
-			//Apply gravity if the player is not on a platform.
-			if(groundList.Count == 0){
-				velocity += playerGravity * Time.deltaTime;
-			}
-			
-			//I moved this to the handle X function.  Also am not modifying
-			//x velocity anymore becaues the player is moving based on input
-			//so it won't have a velocity to keep moving.  I'm just going to
-			//check if's encountered a wall and just set it's x change to 0.
-			/*
-			if(rightWallList.Count != 0 && velocity.x > 0){
-				velocity.x = 0;
-			}
-			if(leftWallList.Count != 0 && velocity.x < 0){
-				velocity.x = 0;
-			}
-			*/
-			//applies the gravity here
-			pos += velocity * Time.deltaTime;
-			this.transform.position = pos;
-			currentLinePosition = pos;
-			velocity.x = oldXSpeed;
-			
-			//don't need this anymore I think
-			/*
-			if (this && LevelLoader.ll && this.transform.position.y <= -4.0f) {
-				RestoreDefaults();
-			}
-			*/
-		}
+
 		prevGroundLeftCornerPos = curGroundLeftCornerPos;
 		prevGroundRightCornerPos = curGroundRightCornerPos;
 		curGroundLeftCornerPos = getGroundLeftCorner ();
@@ -194,8 +58,23 @@ public class PlayerObject : MonoBehaviour {
 		curTopRightCornerPos = getTopRightCorner ();
 		hitGroundTimer--;
 	}
-	
-	public void OnTriggerEnter(Collider other){
+
+	void OnTriggerEnter(Collider other){
+		if(other.gameObject.tag == "jumpBullet"){
+			//this.rigidbody.velocity = new Vector3(0,10,0);
+			this.velocity += new Vector3(0,10,0);
+			Destroy(other.gameObject);
+		}
+		if(other.gameObject.tag == "rightBullet"){
+			//this.rigidbody.velocity = new Vector3(10,0,0);
+			this.velocity += new Vector3(10,0,0);
+			Destroy(other.gameObject);
+		}
+		if(other.gameObject.tag == "leftBullet"){
+			//this.rigidbody.velocity = new Vector3(-10,0,0);
+			this.velocity += new Vector3(-10,0,0);
+			Destroy(other.gameObject);	
+		}
 		
 		if(!other.GetComponent<GroundObject>()){
 			return;
@@ -284,8 +163,7 @@ public class PlayerObject : MonoBehaviour {
 		
 		if (shouldMoveOnTop) {
 			if(Mathf.Sign(velocity.y) != Mathf.Sign(gravityDirection))
-				return;
-			
+				return;	
 			
 			if (Mathf.Approximately (other.bounds.min.x, this.collider.bounds.max.x)
 			    || Mathf.Approximately (other.bounds.max.x, this.collider.bounds.min.x)) {
@@ -359,30 +237,7 @@ public class PlayerObject : MonoBehaviour {
 			leftWallList.Remove(other);
 		}
 	}
-	
-	//ACTIONS
-	
-	public void Jump(){
-		velocity.y = jumpSpeed;
-	}
-	
-	public void Reverse(){
-		velocity.x = -velocity.x;
-	}
-	
-	public void RestoreDefaults(){
-		groundList = new List<Collider> ();
-		rightWallList = new List<Collider> ();
-		leftWallList = new List<Collider> ();
-		velocity = Vector3.zero;
-		
-		//velocity.x = xSpeed;
-		//playing = false;
-		hitGroundTimer = 0;
-		currentLinePosition = this.transform.position;	
-	}
-	
-	
+
 	//BOOKKEEPING
 	private Vector3 getGroundLeftCorner(){
 		Vector3 pos = this.transform.position;
@@ -411,7 +266,7 @@ public class PlayerObject : MonoBehaviour {
 		pos.y += ((this.transform.localScale.y) / 2.0f) * -gravityDirection;
 		return pos;
 	}
-	
+
 	//http://answers.unity3d.com/questions/163864/test-if-point-is-in-collider.html
 	//Answer by DarkharStudio
 	static public bool IsInside ( Collider test, Vector3 point)

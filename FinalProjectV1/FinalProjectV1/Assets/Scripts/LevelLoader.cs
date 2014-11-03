@@ -59,6 +59,7 @@ public class LevelLoader : MonoBehaviour {
 		string[] wholeSplit = textObj.text.Split ('\n');
 		string[] lineSplit1 = wholeSplit[0].Split(' ');
 		int maxXpos = lineSplit1.Length;
+		print (maxXpos);
 		int maxYpos = wholeSplit.Length;
 
 		string[,] mapGrid = new string[lineSplit1.Length, wholeSplit.Length];
@@ -171,14 +172,11 @@ public class LevelLoader : MonoBehaviour {
 							topYPos = 0;
 							botYPos = 0;
 							break;
-						} else if(mapGrid[xpos, tempY] == "G"){
+						} else if (mapGrid[xpos, tempY] == "G"){
 							topYPos = tempY;
 							mapGrid[xpos, tempY] = "0";
 						}
-
 					}
-
-
 				}
 			}
 		}

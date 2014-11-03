@@ -203,6 +203,8 @@ public class PlayerObjectNathan : MonoBehaviour {
 		
 		float leftSideWallPos = other.transform.position.x - (other.transform.localScale.x / 2.0f);
 		float rightSideWallPos = other.transform.position.x + (other.transform.localScale.x / 2.0f);
+
+		float approxVal = 0.1f;
 		
 		bool shouldMoveOnTop = false;
 		bool shouldBounceOffBottom = false;
@@ -218,9 +220,9 @@ public class PlayerObjectNathan : MonoBehaviour {
 			RaycastHit hitInfo;
 			Physics.Raycast(prevGroundLeftCornerPos, cornerPosChangeDirection, out hitInfo);
 			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, 0.3f)){
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, approxVal)){
 				shouldMoveOnTop = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, 0.3f)){
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, approxVal)){
 				shouldAssignAsLeftWall = true;
 			}
 			
@@ -230,9 +232,9 @@ public class PlayerObjectNathan : MonoBehaviour {
 			RaycastHit hitInfo;
 			Physics.Raycast(prevGroundRightCornerPos, cornerPosChangeDirection, out hitInfo);
 			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, 0.3f)){
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, approxVal)){
 				shouldMoveOnTop = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, 0.3f)){
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, approxVal)){
 				shouldAssignAsRightWall = true;
 			}
 		} else if (IsInside (other.collider, curTopLeftCornerPos) && IsInside (other.collider, curTopRightCornerPos)) {
@@ -244,9 +246,9 @@ public class PlayerObjectNathan : MonoBehaviour {
 			RaycastHit hitInfo;
 			Physics.Raycast(prevTopLeftCornerPos, cornerPosChangeDirection, out hitInfo);
 			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, 0.3f)){
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, approxVal)){
 				shouldBounceOffBottom = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, 0.3f)){
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, approxVal)){
 				shouldAssignAsLeftWall = true;
 			}
 		} else if (IsInside (other.collider, curTopRightCornerPos)) {
@@ -256,14 +258,14 @@ public class PlayerObjectNathan : MonoBehaviour {
 			RaycastHit hitInfo;
 			Physics.Raycast(prevTopRightCornerPos, cornerPosChangeDirection, out hitInfo);
 			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, 0.3f)){
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, approxVal)){
 				shouldBounceOffBottom = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, 0.3f)){
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, approxVal)){
 				shouldAssignAsRightWall = true;
 			}
 		}
 		
-		if (shouldMoveOnTop) {
+		if (shouldMoveOnTop && (Mathf.Sign(velocity.y) == -1)) {
 			if (Mathf.Approximately (other.bounds.min.x, this.collider.bounds.max.x)
 			    || Mathf.Approximately (other.bounds.max.x, this.collider.bounds.min.x)) {
 				return;
@@ -303,7 +305,7 @@ public class PlayerObjectNathan : MonoBehaviour {
 			newPos.x = groundPos.x - radiAdd - 0.01f;
 			this.transform.position = newPos;
 		} 
-		else if (shouldBounceOffBottom){
+		else if (shouldBounceOffBottom && (Mathf.Sign(velocity.y) == 1)){
 			float radiAdd = (this.transform.lossyScale.y) / 2.0f + (other.transform.localScale.y) / 2.0f;
 			Vector3 oldPos = this.transform.position;
 			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);

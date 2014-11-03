@@ -59,20 +59,35 @@ public class DummyScriptNathan : MonoBehaviour {
 		hitGroundTimer--;
 	}
 
+	private float pushPullScaling = 9.0f;
 	void OnTriggerEnter(Collider other){
 		if(other.gameObject.tag == "jumpBullet"){
 			//this.rigidbody.velocity = new Vector3(0,10,0);
 			this.velocity += new Vector3(0,10,0);
 			Destroy(other.gameObject);
 		}
+
+		//the following two have been changed to get the vector between the player and the dummy.
+		//then it normalizes is so a vector3 like (-10,0,0) becomes (-1,0,0) and you can apply
+		//the scaling multiplier to it.
+
+		//making this the pull
 		if(other.gameObject.tag == "rightBullet"){
 			//this.rigidbody.velocity = new Vector3(10,0,0);
-			this.velocity += new Vector3(10,0,0);
+			//this.velocity += new Vector3(10,0,0);
+			Vector3 diff = transform.position - PlayerObjectNathan.P.transform.position;
+			diff = diff.normalized * pushPullScaling;
+			this.velocity +=new Vector3(diff.x, diff.y * 2, diff.z);
 			Destroy(other.gameObject);
 		}
+
+		//making this the push
 		if(other.gameObject.tag == "leftBullet"){
 			//this.rigidbody.velocity = new Vector3(-10,0,0);
-			this.velocity += new Vector3(-10,0,0);
+			//this.velocity += new Vector3(-10,0,0);
+			Vector3 diff = PlayerObjectNathan.P.transform.position - transform.position;
+			diff = diff.normalized * pushPullScaling;
+			this.velocity += new Vector3(diff.x, diff.y * 2, diff.z);
 			Destroy(other.gameObject);	
 		}
 		

@@ -120,7 +120,7 @@ public class LevelLoader : MonoBehaviour {
 
 				newObj = Instantiate(whatToMake) as GameObject;
 
-				position.x = (float)xpos;
+				position.x = (float)(xpos - 1);
 				position.y = (float)ypos;
 				
 				newObj.transform.position = position;

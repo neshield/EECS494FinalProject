@@ -2,8 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class PlayerObjectNathan : MonoBehaviour {
-	static public PlayerObjectNathan P;
+public class PlayerObjectNathan2 : MonoBehaviour {
+	static public PlayerObjectNathan2 P;
 	
 	public Vector3 startPosition;
 	public Vector3 velocity;
@@ -52,7 +52,7 @@ public class PlayerObjectNathan : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		if (Input.GetButton ("Jump1")) {
+		if (Input.GetButton ("Jump2")) {
 			jumpQueued = true;
 		}
 
@@ -99,7 +99,7 @@ public class PlayerObjectNathan : MonoBehaviour {
 	}
 
 	void handleXMovement(){
-		float xMovement = Input.GetAxisRaw("Horizontal2");
+		float xMovement = Input.GetAxisRaw("Horizontal1");
 		Vector3 pos = this.transform.position;
 		Vector3 change = new Vector3 (0, 0);
 		
@@ -176,6 +176,7 @@ public class PlayerObjectNathan : MonoBehaviour {
 			Destroy(other.gameObject);
 		}
 		if(other.gameObject.tag == "rightBullet"){
+			print ("right hit player2");
 			this.rigidbody.velocity = new Vector3(10,0,0);
 			Destroy(other.gameObject);
 		}
@@ -187,6 +188,7 @@ public class PlayerObjectNathan : MonoBehaviour {
 		if(!other.GetComponent<GroundObject>()){
 			return;
 		}
+
 		if(groundList.Contains(other)){
 			return;
 		}

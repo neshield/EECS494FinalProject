@@ -12,6 +12,8 @@ public class DummyScriptNathan : MonoBehaviour {
 	private int hitGroundTimer = 0;
 
 	public static Vector3 playerGravity = new Vector3(0.0f, -15f, 0.0f);
+	private Vector3 spawnPos = new Vector3(19.6f, 7.1f, 0.0f);
+
 	public Vector3 velocity;
 
 	Vector3	curGroundRightCornerPos;
@@ -60,6 +62,8 @@ public class DummyScriptNathan : MonoBehaviour {
 	}
 
 	private float pushPullScaling = 9.0f;
+
+/*
 	void OnTriggerEnter(Collider other){
 		if(other.gameObject.tag == "jumpBullet"){
 			//this.rigidbody.velocity = new Vector3(0,10,0);
@@ -251,6 +255,223 @@ public class DummyScriptNathan : MonoBehaviour {
 			rightWallList.Remove(other);
 			leftWallList.Remove(other);
 		}
+	}
+*/
+	void OnTriggerEnter(Collider other){
+		HandleBulletCollision (other);
+		HandleGroundCollision (other);
+		HandleSpikeCollision (other);
+	}
+	
+	public void HitGround(){
+		if (hitGroundTimer > 0) {
+			return;
+		}
+		Vector3 groundForce = Vector3.zero;
+		groundForce.y = -velocity.y;
+		velocity += groundForce;
+		hitGroundTimer = 10;
+	}
+	
+	void OnTriggerStay(Collider other){
+		OnTriggerEnter(other);
+	}
+	
+	void OnTriggerExit(Collider other){
+		if(other.GetComponent<GroundObject>()){
+			groundList.Remove(other);
+			rightWallList.Remove(other);
+			leftWallList.Remove(other);
+		}
+	}
+	
+	void HandleBulletCollision(Collider other){
+		/*
+		if(other.gameObject.tag == "jumpBullet"){
+			this.velocity += new Vector3(0,10,0);
+			Destroy(other.gameObject);
+		}
+		if(other.gameObject.tag == "rightBullet"){
+			this.velocity += new Vector3(10,0,0);
+			Destroy(other.gameObject);
+		}
+		if(other.gameObject.tag == "leftBullet"){
+			this.velocity += new Vector3(-10,0,0);
+			Destroy(other.gameObject);	
+		}*/
+
+		if(other.gameObject.tag == "rightBullet"){
+			//this.rigidbody.velocity = new Vector3(10,0,0);
+			//this.velocity += new Vector3(10,0,0);
+			Vector3 diff = transform.position - PlayerObjectNathan.P.transform.position;
+			diff = diff.normalized * pushPullScaling;
+			this.velocity +=new Vector3(diff.x, diff.y * 2, diff.z);
+			Destroy(other.gameObject);
+		}
+		
+		//making this the push
+		if(other.gameObject.tag == "leftBullet"){
+			//this.rigidbody.velocity = new Vector3(-10,0,0);
+			//this.velocity += new Vector3(-10,0,0);
+			Vector3 diff = PlayerObjectNathan.P.transform.position - transform.position;
+			diff = diff.normalized * pushPullScaling;
+			this.velocity += new Vector3(diff.x, diff.y * 2, diff.z);
+			Destroy(other.gameObject);	
+		}
+	}
+	
+	void HandleGroundCollision(Collider other){
+		if(!other.GetComponent<GroundObject>()){
+			return;
+		}
+		if(groundList.Contains(other)){
+			return;
+		}
+		if(rightWallList.Contains(other)){
+			return;
+		}
+		if(leftWallList.Contains(other)){
+			return;
+		}
+		
+		
+		float groundYPos = other.transform.position.y + (other.transform.localScale.y / 2.0f * 1);
+		float ceilYPos = other.transform.position.y + (other.transform.localScale.y / 2.0f * -1);
+		
+		float leftSideWallPos = other.transform.position.x - (other.transform.localScale.x / 2.0f);
+		float rightSideWallPos = other.transform.position.x + (other.transform.localScale.x / 2.0f);
+		
+		float approxVal = 0.1f;
+		
+		bool shouldMoveOnTop = false;
+		bool shouldBounceOffBottom = false;
+		bool shouldAssignAsLeftWall = false;
+		bool shouldAssignAsRightWall = false;
+		
+		//This section 
+		if (IsInside (other.collider, curGroundLeftCornerPos) && IsInside (other.collider, curGroundRightCornerPos)) {
+			shouldMoveOnTop = true;
+		} else if (IsInside (other.collider, curGroundLeftCornerPos)) {
+			Vector3 cornerPosChangeDirection = curGroundLeftCornerPos - prevGroundLeftCornerPos;
+			
+			RaycastHit hitInfo;
+			Physics.Raycast(prevGroundLeftCornerPos, cornerPosChangeDirection, out hitInfo);
+			
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, approxVal)){
+				shouldMoveOnTop = true;
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, approxVal)){
+				shouldAssignAsLeftWall = true;
+			}
+			
+		} else if (IsInside (other.collider, curGroundRightCornerPos)) {
+			Vector3 cornerPosChangeDirection = curGroundRightCornerPos - prevGroundRightCornerPos;
+			
+			RaycastHit hitInfo;
+			Physics.Raycast(prevGroundRightCornerPos, cornerPosChangeDirection, out hitInfo);
+			
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, approxVal)){
+				shouldMoveOnTop = true;
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, approxVal)){
+				shouldAssignAsRightWall = true;
+			}
+		} else if (IsInside (other.collider, curTopLeftCornerPos) && IsInside (other.collider, curTopRightCornerPos)) {
+			shouldBounceOffBottom = true;
+		} else if (IsInside (other.collider, curTopLeftCornerPos)) {
+			//Only the left corner is in the ground
+			Vector3 cornerPosChangeDirection = curTopLeftCornerPos - prevTopLeftCornerPos;
+			
+			RaycastHit hitInfo;
+			Physics.Raycast(prevTopLeftCornerPos, cornerPosChangeDirection, out hitInfo);
+			
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, approxVal)){
+				shouldBounceOffBottom = true;
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, approxVal)){
+				shouldAssignAsLeftWall = true;
+			}
+		} else if (IsInside (other.collider, curTopRightCornerPos)) {
+			//Only the left corner is in the ground
+			Vector3 cornerPosChangeDirection = curTopRightCornerPos - prevTopRightCornerPos;
+			
+			RaycastHit hitInfo;
+			Physics.Raycast(prevTopRightCornerPos, cornerPosChangeDirection, out hitInfo);
+			
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, approxVal)){
+				shouldBounceOffBottom = true;
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, approxVal)){
+				shouldAssignAsRightWall = true;
+			}
+		}
+		
+		if (shouldMoveOnTop && (Mathf.Sign(velocity.y) == -1)) {
+			if (Mathf.Approximately (other.bounds.min.x, this.collider.bounds.max.x)
+			    || Mathf.Approximately (other.bounds.max.x, this.collider.bounds.min.x)) {
+				return;
+			}
+			//ONLY HIT GROUND IF VEL IS GOING DOWN
+			HitGround ();
+			if(!groundList.Contains(other)){
+				groundList.Add(other);
+			}
+			float radiAdd = (this.transform.lossyScale.y) / 2.0f + (other.transform.localScale.y) / 2.0f;
+			Vector3 oldPos = this.transform.position;
+			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
+			Vector3 groundPos = other.transform.position;
+			newPos.y = groundPos.y + radiAdd;
+			this.transform.position = newPos;
+		} 
+		else if (shouldAssignAsLeftWall){
+			if(!leftWallList.Contains(other)){
+				leftWallList.Add(other);
+			}
+			float radiAdd = (this.transform.lossyScale.x) / 2.0f + (other.transform.localScale.x) / 2.0f;
+			Vector3 oldPos = this.transform.position;
+			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
+			Vector3 groundPos = other.transform.position;
+			newPos.x = groundPos.x + radiAdd + 0.01f;
+			this.transform.position = newPos;
+		} 
+		else if (shouldAssignAsRightWall){
+			if(!rightWallList.Contains(other)){
+				rightWallList.Add(other);
+			}
+			float radiAdd = (this.transform.lossyScale.x) / 2.0f + (other.transform.localScale.x) / 2.0f;
+			Vector3 oldPos = this.transform.position;
+			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
+			Vector3 groundPos = other.transform.position;
+			newPos.x = groundPos.x - radiAdd - 0.01f;
+			this.transform.position = newPos;
+		} 
+		else if (shouldBounceOffBottom && (Mathf.Sign(velocity.y) == 1)){
+			float radiAdd = (this.transform.lossyScale.y) / 2.0f + (other.transform.localScale.y) / 2.0f;
+			Vector3 oldPos = this.transform.position;
+			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
+			Vector3 groundPos = other.transform.position;
+			newPos.y = groundPos.y - radiAdd;// - 0.05f;
+			velocity.y = 0.0f;
+			this.transform.position = newPos;
+		}
+	}
+
+	public void RestoreDefaults(){
+		groundList = new List<Collider> ();
+		rightWallList = new List<Collider> ();
+		leftWallList = new List<Collider> ();
+		velocity = Vector3.zero;
+		
+		hitGroundTimer = 0;
+	}
+
+	void HandleSpikeCollision(Collider other){
+		if (other.gameObject.tag == "spike") {
+			Die ();
+		} else {
+			return;
+		}
+	}
+
+	void Die(){
+		this.transform.position = spawnPos;
+		RestoreDefaults ();
 	}
 
 	//BOOKKEEPING

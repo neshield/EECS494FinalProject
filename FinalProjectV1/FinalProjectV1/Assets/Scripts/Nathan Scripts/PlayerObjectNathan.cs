@@ -20,6 +20,7 @@ public class PlayerObjectNathan : MonoBehaviour {
 	bool ________________________________________;
 	//Physics stuff
 	private int hitGroundTimer = 0;
+	private Vector3 spawnPos = new Vector3(19.6f, 7.1f, 0.0f);
 	
 	Vector3	curGroundRightCornerPos;
 	Vector3 curGroundLeftCornerPos;
@@ -99,7 +100,7 @@ public class PlayerObjectNathan : MonoBehaviour {
 	}
 
 	void handleXMovement(){
-		float xMovement = Input.GetAxisRaw("Horizontal2");
+		float xMovement = Input.GetAxisRaw("Horizontal1");
 		Vector3 pos = this.transform.position;
 		Vector3 change = new Vector3 (0, 0);
 		
@@ -138,6 +139,10 @@ public class PlayerObjectNathan : MonoBehaviour {
 		}
 	}
 
+	public void queueJump(){
+		jumpQueued = true;
+	}
+
 	void FixedUpdate(){
 		if(playing){
 
@@ -171,6 +176,34 @@ public class PlayerObjectNathan : MonoBehaviour {
 	}
 	
 	void OnTriggerEnter(Collider other){
+		HandleBulletCollision (other);
+		HandleGroundCollision (other);
+		HandleSpikeCollision (other);
+	}
+
+	public void HitGround(){
+		if (hitGroundTimer > 0) {
+			return;
+		}
+		Vector3 groundForce = Vector3.zero;
+		groundForce.y = -velocity.y;
+		velocity += groundForce;
+		hitGroundTimer = 10;
+	}
+	
+	void OnTriggerStay(Collider other){
+		OnTriggerEnter(other);
+	}
+	
+	void OnTriggerExit(Collider other){
+		if(other.GetComponent<GroundObject>()){
+			groundList.Remove(other);
+			rightWallList.Remove(other);
+			leftWallList.Remove(other);
+		}
+	}
+
+	void HandleBulletCollision(Collider other){
 		if(other.gameObject.tag == "jumpBullet"){
 			this.rigidbody.velocity = new Vector3(0,10,0);
 			Destroy(other.gameObject);
@@ -183,7 +216,9 @@ public class PlayerObjectNathan : MonoBehaviour {
 			this.rigidbody.velocity = new Vector3(-10,0,0);
 			Destroy(other.gameObject);	
 		}
+	}
 
+	void HandleGroundCollision(Collider other){
 		if(!other.GetComponent<GroundObject>()){
 			return;
 		}
@@ -203,7 +238,7 @@ public class PlayerObjectNathan : MonoBehaviour {
 		
 		float leftSideWallPos = other.transform.position.x - (other.transform.localScale.x / 2.0f);
 		float rightSideWallPos = other.transform.position.x + (other.transform.localScale.x / 2.0f);
-
+		
 		float approxVal = 0.1f;
 		
 		bool shouldMoveOnTop = false;
@@ -315,28 +350,18 @@ public class PlayerObjectNathan : MonoBehaviour {
 			this.transform.position = newPos;
 		}
 	}
-	
-	
-	public void HitGround(){
-		if (hitGroundTimer > 0) {
+
+	void HandleSpikeCollision(Collider other){
+		if (other.gameObject.tag == "spike") {
+			Die ();
+		} else {
 			return;
 		}
-		Vector3 groundForce = Vector3.zero;
-		groundForce.y = -velocity.y;
-		velocity += groundForce;
-		hitGroundTimer = 10;
 	}
-	
-	void OnTriggerStay(Collider other){
-		OnTriggerEnter(other);
-	}
-	
-	void OnTriggerExit(Collider other){
-		if(other.GetComponent<GroundObject>()){
-			groundList.Remove(other);
-			rightWallList.Remove(other);
-			leftWallList.Remove(other);
-		}
+
+	void Die(){
+		this.transform.position = spawnPos;
+		RestoreDefaults ();
 	}
 	
 	//ACTIONS
@@ -357,7 +382,9 @@ public class PlayerObjectNathan : MonoBehaviour {
 
 		hitGroundTimer = 0;
 	}
-	
+
+
+
 	//BOOKKEEPING
 	private Vector3 getGroundLeftCorner(){
 		Vector3 pos = this.transform.position;

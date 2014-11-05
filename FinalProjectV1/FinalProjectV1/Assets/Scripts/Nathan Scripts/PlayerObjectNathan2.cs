@@ -20,6 +20,7 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 	bool ________________________________________;
 	//Physics stuff
 	private int hitGroundTimer = 0;
+	private Vector3 spawnPos = new Vector3(7.0f, 7.1f, 0.0f);
 	
 	Vector3	curGroundRightCornerPos;
 	Vector3 curGroundLeftCornerPos;
@@ -29,24 +30,24 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 	Vector3 curTopLeftCornerPos;
 	Vector3 prevTopLeftCornerPos;
 	Vector3 prevTopRightCornerPos;
-
+	
 	bool jumpQueued;
-
-
+	
+	
 	//SCOTT AND MATT SHOOTING STUFF
 	public GameObject leftBullet;
 	public GameObject rightBullet;
 	public GameObject jumpBullet;
 	public GameObject currentBullet;
 	int facing = 0;
-
-
+	
+	
 	// Use this for initialization
 	void Start () {
 		P = this;
 		RestoreDefaults ();
 		playing = true;
-
+		
 		jumpQueued = false;
 	}
 	
@@ -55,7 +56,7 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 		if (Input.GetButton ("Jump2")) {
 			jumpQueued = true;
 		}
-
+		
 		//SCOTT AND MATT
 		if(Input.GetKeyDown("j")){
 			currentBullet = Instantiate (leftBullet) as GameObject;
@@ -97,9 +98,9 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			}
 		}
 	}
-
+	
 	void handleXMovement(){
-		float xMovement = Input.GetAxisRaw("Horizontal1");
+		float xMovement = Input.GetAxisRaw("Horizontal2");
 		Vector3 pos = this.transform.position;
 		Vector3 change = new Vector3 (0, 0);
 		
@@ -113,7 +114,7 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			change.x = -horizontalChange;
 			facing = -1;
 		}
-
+		
 		//if i'm on a wall and going in that direction don't
 		//have any change
 		if(rightWallList.Count != 0 && change.x > 0){
@@ -122,12 +123,12 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 		if(leftWallList.Count != 0 && change.x < 0){
 			change.x = 0;
 		}
-
+		
 		pos = pos + (change);
-
+		
 		this.transform.position = pos;
 	}
-
+	
 	void handleYMovement (){
 		if(jumpQueued && groundList.Count != 0){
 			Jump ();
@@ -137,16 +138,20 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			jumpQueued = false;
 		}
 	}
-
+	
+	public void queueJump(){
+		jumpQueued = true;
+	}
+	
 	void FixedUpdate(){
 		if(playing){
-
+			
 			handleXMovement();
 			handleYMovement();
-
+			
 			Vector3 pos = this.transform.position;
 			float oldXSpeed = velocity.x;
-
+			
 			//Apply gravity if the player is not on a platform.
 			if(groundList.Count == 0){
 				velocity += playerGravity * Time.deltaTime;
@@ -157,7 +162,7 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			pos += velocity * Time.deltaTime;
 			this.transform.position = pos;
 			velocity.x = oldXSpeed;
-	
+			
 		}
 		prevGroundLeftCornerPos = curGroundLeftCornerPos;
 		prevGroundRightCornerPos = curGroundRightCornerPos;
@@ -171,12 +176,39 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 	}
 	
 	void OnTriggerEnter(Collider other){
+		HandleBulletCollision (other);
+		HandleGroundCollision (other);
+		HandleSpikeCollision (other);
+	}
+	
+	public void HitGround(){
+		if (hitGroundTimer > 0) {
+			return;
+		}
+		Vector3 groundForce = Vector3.zero;
+		groundForce.y = -velocity.y;
+		velocity += groundForce;
+		hitGroundTimer = 10;
+	}
+	
+	void OnTriggerStay(Collider other){
+		OnTriggerEnter(other);
+	}
+	
+	void OnTriggerExit(Collider other){
+		if(other.GetComponent<GroundObject>()){
+			groundList.Remove(other);
+			rightWallList.Remove(other);
+			leftWallList.Remove(other);
+		}
+	}
+	
+	void HandleBulletCollision(Collider other){
 		if(other.gameObject.tag == "jumpBullet"){
 			this.rigidbody.velocity = new Vector3(0,10,0);
 			Destroy(other.gameObject);
 		}
 		if(other.gameObject.tag == "rightBullet"){
-			print ("right hit player2");
 			this.rigidbody.velocity = new Vector3(10,0,0);
 			Destroy(other.gameObject);
 		}
@@ -184,11 +216,12 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			this.rigidbody.velocity = new Vector3(-10,0,0);
 			Destroy(other.gameObject);	
 		}
-
+	}
+	
+	void HandleGroundCollision(Collider other){
 		if(!other.GetComponent<GroundObject>()){
 			return;
 		}
-
 		if(groundList.Contains(other)){
 			return;
 		}
@@ -206,6 +239,8 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 		float leftSideWallPos = other.transform.position.x - (other.transform.localScale.x / 2.0f);
 		float rightSideWallPos = other.transform.position.x + (other.transform.localScale.x / 2.0f);
 		
+		float approxVal = 0.1f;
+		
 		bool shouldMoveOnTop = false;
 		bool shouldBounceOffBottom = false;
 		bool shouldAssignAsLeftWall = false;
@@ -220,9 +255,9 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			RaycastHit hitInfo;
 			Physics.Raycast(prevGroundLeftCornerPos, cornerPosChangeDirection, out hitInfo);
 			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, 0.3f)){
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, approxVal)){
 				shouldMoveOnTop = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, 0.3f)){
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, approxVal)){
 				shouldAssignAsLeftWall = true;
 			}
 			
@@ -232,9 +267,9 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			RaycastHit hitInfo;
 			Physics.Raycast(prevGroundRightCornerPos, cornerPosChangeDirection, out hitInfo);
 			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, 0.3f)){
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, approxVal)){
 				shouldMoveOnTop = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, 0.3f)){
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, approxVal)){
 				shouldAssignAsRightWall = true;
 			}
 		} else if (IsInside (other.collider, curTopLeftCornerPos) && IsInside (other.collider, curTopRightCornerPos)) {
@@ -246,9 +281,9 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			RaycastHit hitInfo;
 			Physics.Raycast(prevTopLeftCornerPos, cornerPosChangeDirection, out hitInfo);
 			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, 0.3f)){
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, approxVal)){
 				shouldBounceOffBottom = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, 0.3f)){
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, approxVal)){
 				shouldAssignAsLeftWall = true;
 			}
 		} else if (IsInside (other.collider, curTopRightCornerPos)) {
@@ -258,14 +293,14 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			RaycastHit hitInfo;
 			Physics.Raycast(prevTopRightCornerPos, cornerPosChangeDirection, out hitInfo);
 			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, 0.3f)){
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, approxVal)){
 				shouldBounceOffBottom = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, 0.3f)){
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, approxVal)){
 				shouldAssignAsRightWall = true;
 			}
 		}
 		
-		if (shouldMoveOnTop) {
+		if (shouldMoveOnTop && (Mathf.Sign(velocity.y) == -1)) {
 			if (Mathf.Approximately (other.bounds.min.x, this.collider.bounds.max.x)
 			    || Mathf.Approximately (other.bounds.max.x, this.collider.bounds.min.x)) {
 				return;
@@ -305,7 +340,7 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 			newPos.x = groundPos.x - radiAdd - 0.01f;
 			this.transform.position = newPos;
 		} 
-		else if (shouldBounceOffBottom){
+		else if (shouldBounceOffBottom && (Mathf.Sign(velocity.y) == 1)){
 			float radiAdd = (this.transform.lossyScale.y) / 2.0f + (other.transform.localScale.y) / 2.0f;
 			Vector3 oldPos = this.transform.position;
 			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
@@ -316,27 +351,17 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 		}
 	}
 	
-	
-	public void HitGround(){
-		if (hitGroundTimer > 0) {
+	void HandleSpikeCollision(Collider other){
+		if (other.gameObject.tag == "spike") {
+			Die ();
+		} else {
 			return;
 		}
-		Vector3 groundForce = Vector3.zero;
-		groundForce.y = -velocity.y;
-		velocity += groundForce;
-		hitGroundTimer = 10;
 	}
 	
-	void OnTriggerStay(Collider other){
-		OnTriggerEnter(other);
-	}
-	
-	void OnTriggerExit(Collider other){
-		if(other.GetComponent<GroundObject>()){
-			groundList.Remove(other);
-			rightWallList.Remove(other);
-			leftWallList.Remove(other);
-		}
+	void Die(){
+		this.transform.position = spawnPos;
+		RestoreDefaults ();
 	}
 	
 	//ACTIONS
@@ -354,9 +379,11 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 		rightWallList = new List<Collider> ();
 		leftWallList = new List<Collider> ();
 		velocity = Vector3.zero;
-
+		
 		hitGroundTimer = 0;
 	}
+	
+	
 	
 	//BOOKKEEPING
 	private Vector3 getGroundLeftCorner(){

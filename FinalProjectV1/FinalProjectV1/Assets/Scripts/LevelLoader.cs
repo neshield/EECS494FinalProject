@@ -59,13 +59,11 @@ public class LevelLoader : MonoBehaviour {
 		string[] wholeSplit = textObj.text.Split ('\n');
 		string[] lineSplit1 = wholeSplit[0].Split(' ');
 		int maxXpos = lineSplit1.Length;
-		print (maxXpos);
 		int maxYpos = wholeSplit.Length;
 
 		string[,] mapGrid = new string[lineSplit1.Length, wholeSplit.Length];
 
 		//Create grid
-		
 		GameObject whatToMake = null;
 		GameObject newObj;
 		int counter = 0;

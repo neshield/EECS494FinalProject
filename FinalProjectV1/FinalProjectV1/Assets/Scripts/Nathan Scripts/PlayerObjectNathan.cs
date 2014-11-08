@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using InControl;
+
 
 public class PlayerObjectNathan : MonoBehaviour {
 	static public PlayerObjectNathan P;
@@ -16,6 +18,8 @@ public class PlayerObjectNathan : MonoBehaviour {
 	public List<Collider> groundList;
 	public List<Collider> leftWallList;
 	public List<Collider> rightWallList;
+
+	public GameObject bullet;
 	
 	bool ________________________________________;
 	//Physics stuff
@@ -31,6 +35,8 @@ public class PlayerObjectNathan : MonoBehaviour {
 	Vector3 prevTopLeftCornerPos;
 	Vector3 prevTopRightCornerPos;
 
+	Vector3 aimVector;
+
 	bool jumpQueued;
 
 
@@ -38,9 +44,10 @@ public class PlayerObjectNathan : MonoBehaviour {
 	public GameObject leftBullet;
 	public GameObject rightBullet;
 	public GameObject jumpBullet;
-	public GameObject currentBullet;
+	private GameObject currentBullet;
 	int facing = 0;
 
+	private InputDevice inputDevice;
 
 	// Use this for initialization
 	void Start () {
@@ -48,63 +55,72 @@ public class PlayerObjectNathan : MonoBehaviour {
 		RestoreDefaults ();
 		playing = true;
 
+		aimVector.x = 0f;
+		aimVector.y = 1f;
+		aimVector.z = 0f;
+
+		inputDevice = InputManager.ActiveDevice;
+
 		jumpQueued = false;
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		if (Input.GetButton ("Jump1")) {
+		if (InputManager.ActiveDevice.LeftBumper.WasPressed) {
 			jumpQueued = true;
 		}
 
+
+		//Get aim vector
+		Vector2 rsv = inputDevice.RightStick;
+		if (Mathf.Approximately (rsv.magnitude, 0)) {
+			rsv = aimVector;
+		}
+
+		aimVector.x = rsv.x;
+		aimVector.y = rsv.y;
+		aimVector.z = 0.0f;
+		
+		aimVector.Normalize();
+		
+		aimVector = aimVector * 25.0f;
+
 		//SCOTT AND MATT
-		if(Input.GetKeyDown("j")){
-			currentBullet = Instantiate (leftBullet) as GameObject;
-			if (facing == 1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
-				
-			}
-			
-			if (facing == -1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
-			}
+		if(InputManager.ActiveDevice.LeftTrigger.WasPressed){
+			currentBullet = Instantiate (bullet) as GameObject;
+			BulletScript obj = currentBullet.GetComponent<BulletScript>();
+
+			obj.setPlayerRef(this);
+			obj.setPull();
+
+			//canFire = false;
+
+			obj.setPosition(transform.position);
+			obj.setVelocity(aimVector);
 		}
-		else if(Input.GetKeyDown("l")){
-			currentBullet = Instantiate (rightBullet) as GameObject;
-			if (facing == 1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
-				
-			}
+		else if(InputManager.ActiveDevice.RightTrigger.WasPressed){
+			currentBullet = Instantiate (bullet) as GameObject;
+			BulletScript obj = currentBullet.GetComponent<BulletScript>();
 			
-			if (facing == -1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
-			}
-		}
-		else if(Input.GetKeyDown("i")){
-			currentBullet = Instantiate (jumpBullet) as GameObject;
-			if (facing == 1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
-				
-			}
+			obj.setPlayerRef(this);
+			obj.setPush();
 			
-			if (facing == -1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
-			}
+			//canFire = false;
+			
+			obj.setPosition(transform.position);
+			obj.setVelocity(aimVector);;
 		}
+
 	}
 
-	void handleXMovement(){
-		float xMovement = Input.GetAxisRaw("Horizontal1");
+	public void handleXMovement(){
+		float xMovement = .1f * inputDevice.LeftStickX.Value;
+
 		Vector3 pos = this.transform.position;
 		Vector3 change = new Vector3 (0, 0);
 		
-		float horizontalChange = 0.15f;
+		/*
+			float horizontalChange = 0.15f;
 		
 		if(xMovement > 0){
 			change.x = horizontalChange;
@@ -114,18 +130,18 @@ public class PlayerObjectNathan : MonoBehaviour {
 			change.x = -horizontalChange;
 			facing = -1;
 		}
+		*/
 
-		//if i'm on a wall and going in that direction don't
-		//have any change
+		change.x = xMovement;
 		if(rightWallList.Count != 0 && change.x > 0){
 			change.x = 0;
 		}
 		if(leftWallList.Count != 0 && change.x < 0){
 			change.x = 0;
 		}
-
+		
 		pos = pos + (change);
-
+		
 		this.transform.position = pos;
 	}
 

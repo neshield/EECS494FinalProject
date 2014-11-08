@@ -12,6 +12,6 @@ public class MovementController : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-	
+		//PlayerObjectNathan.P.handleXMovement (Input.GetAxisRaw ("Horizontal1"));
 	}
 }

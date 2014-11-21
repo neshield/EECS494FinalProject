@@ -298,7 +298,7 @@ public class DummyScriptNathan : MonoBehaviour {
 		if(other.gameObject.tag == "leftBullet"){
 			this.velocity += new Vector3(-10,0,0);
 			Destroy(other.gameObject);	
-		}*/
+		}
 
 		if(other.gameObject.tag == "rightBullet"){
 			//this.rigidbody.velocity = new Vector3(10,0,0);
@@ -318,6 +318,7 @@ public class DummyScriptNathan : MonoBehaviour {
 			this.velocity += new Vector3(diff.x, diff.y * 2, diff.z);
 			Destroy(other.gameObject);	
 		}
+		*/
 	}
 	
 	void HandleGroundCollision(Collider other){

@@ -204,17 +204,25 @@ public class PlayerObjectNathan2 : MonoBehaviour {
 	}
 	
 	void HandleBulletCollision(Collider other){
-		if(other.gameObject.tag == "jumpBullet"){
-			this.rigidbody.velocity = new Vector3(0,10,0);
-			Destroy(other.gameObject);
-		}
-		if(other.gameObject.tag == "rightBullet"){
-			this.rigidbody.velocity = new Vector3(10,0,0);
-			Destroy(other.gameObject);
-		}
-		if(other.gameObject.tag == "leftBullet"){
-			this.rigidbody.velocity = new Vector3(-10,0,0);
-			Destroy(other.gameObject);	
+		BulletScript bs = other.GetComponent<BulletScript> ();
+		float pushPullScaling = 5.0f;
+		if(bs){
+			if(bs.getBulletType() == bulletType.PULL){
+				Vector3 diff = transform.position - bs.getPlayerRef().transform.position;
+				diff = diff.normalized * pushPullScaling;
+				this.velocity +=new Vector3(diff.x, diff.y, diff.z);
+				Destroy(other.gameObject);
+			}
+			else if(bs.getBulletType() == bulletType.PUSH){
+				Vector3 diff = bs.getPlayerRef().transform.position - transform.position;
+				diff = diff.normalized * pushPullScaling;
+				this.velocity += new Vector3(diff.x, diff.y * 2, diff.z);
+				Destroy(other.gameObject);	
+			}
+			else if(bs.getBulletType() == bulletType.JUMP){
+				this.velocity += new Vector3(0,16,0);
+				Destroy(other.gameObject);
+			}
 		}
 	}
 	

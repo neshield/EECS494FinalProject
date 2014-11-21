@@ -1,27 +1,34 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using InControl;
+
 
 public class PlayerObject : MonoBehaviour {
 	static public PlayerObject P;
+
+	public int playerNum;
 	
 	public Vector3 startPosition;
 	public Vector3 velocity;
-	public Vector3 currentLinePosition;
-	public float xSpeed = 4.0f; //HAVE TO CHANGE THIS IN INSPECTOR, DINGUS! 4.0 seems good
-	public float jumpSpeed = 12.0f;
-	public static Vector3 playerGravity = new Vector3(0.0f, -15f, 0.0f);
+	public float jumpSpeed = 50.0f;
+	private static Vector3 playerGravity = new Vector3(0.0f, -0.0f, 0.0f);
 	
 	public bool playing;
 	
 	public List<Collider> groundList;
 	public List<Collider> leftWallList;
 	public List<Collider> rightWallList;
+
+	public GameObject bullet;
 	
 	bool ________________________________________;
 	//Physics stuff
-	public int gravityDirection = -1;
 	private int hitGroundTimer = 0;
+	private Vector3 spawnPos = new Vector3(19.6f, 7.1f, 0.0f);
+	private Vector3 forcedVelocity;
+	private int forcedVelFrameCounter;
+	private Vector3 controlledVelocity;
 	
 	Vector3	curGroundRightCornerPos;
 	Vector3 curGroundLeftCornerPos;
@@ -31,158 +38,145 @@ public class PlayerObject : MonoBehaviour {
 	Vector3 curTopLeftCornerPos;
 	Vector3 prevTopLeftCornerPos;
 	Vector3 prevTopRightCornerPos;
-	
+
+	Vector3 aimVector;
+
 	bool jumpQueued;
-	
-	
+
+
 	//SCOTT AND MATT SHOOTING STUFF
 	public GameObject leftBullet;
 	public GameObject rightBullet;
 	public GameObject jumpBullet;
-	public GameObject currentBullet;
+	private GameObject currentBullet;
 	int facing = 0;
-	
-	
+
+	private InputDevice inputDevice;
+
 	// Use this for initialization
 	void Start () {
 		P = this;
 		RestoreDefaults ();
 		playing = true;
-		
+
+		forcedVelocity = Vector3.zero;
+		controlledVelocity = Vector3.zero;
+
+		forcedVelFrameCounter = 0;
+
+		aimVector.x = 0f;
+		aimVector.y = 1f;
+		aimVector.z = 0f;
+
+		print (InputManager.Devices.Count);
+		inputDevice = (InputManager.Devices.Count > playerNum) ? InputManager.Devices[playerNum] : null;
+		print (inputDevice);
+		if(inputDevice == null){
+			Destroy(this.gameObject);
+		}
+
 		jumpQueued = false;
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		if (Input.GetButton ("Jump")) {
+		if (inputDevice.LeftBumper.WasPressed) {
 			jumpQueued = true;
 		}
+
+		//Get aim vector
+		Vector2 rsv = inputDevice.RightStick;
+		if (Mathf.Approximately (rsv.magnitude, 0)) {
+			rsv = aimVector;
+		}
+
+		aimVector.x = rsv.x;
+		aimVector.y = rsv.y;
+		aimVector.z = 0.0f;
 		
+		aimVector.Normalize();
 		
-		
-		
-		
+		aimVector = aimVector * 25.0f;
+
 		//SCOTT AND MATT
-		if(Input.GetKeyDown("j")){
-			currentBullet = Instantiate (leftBullet) as GameObject;
-			if (facing == 1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
-				
-			}
+		if(inputDevice.LeftTrigger.WasPressed){
+			currentBullet = Instantiate (bullet) as GameObject;
+			BulletScript obj = currentBullet.GetComponent<BulletScript>();
+
+			obj.setPlayerRef(this);
+			obj.setPull();
+
+			//canFire = false;
+
+			obj.setPosition(transform.position);
+			obj.setVelocity(aimVector);
+		}
+		else if(inputDevice.RightTrigger.WasPressed){
+			currentBullet = Instantiate (bullet) as GameObject;
+			BulletScript obj = currentBullet.GetComponent<BulletScript>();
 			
-			if (facing == -1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
-			}
+			obj.setPlayerRef(this);
+			obj.setPush();
+
+			obj.setPosition(transform.position);
+			obj.setVelocity(aimVector);
 		}
-		else if(Input.GetKeyDown("l")){
-			currentBullet = Instantiate (rightBullet) as GameObject;
-			if (facing == 1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
-				
-			}
-			
-			if (facing == -1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
-			}
-		}
-		else if(Input.GetKeyDown("i")){
-			currentBullet = Instantiate (jumpBullet) as GameObject;
-			if (facing == 1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (25, 0, 0);
-				
-			}
-			
-			if (facing == -1) {
-				currentBullet.transform.position = transform.position;
-				currentBullet.rigidbody.velocity += new Vector3 (-25, 0, 0);
-			}
-		}
+
 	}
-	
-	void handleXMovement(){
-		float xMovement = Input.GetAxisRaw("Horizontal");
-		Vector3 pos = this.transform.position;
-		Vector3 change = new Vector3 (0, 0);
-		
-		float horizontalChange = 0.15f;
-		
-		if(xMovement > 0){
-			change.x = horizontalChange;
-			facing = 1;
-			print(facing);
-		}
-		else if(xMovement < 0){
-			change.x = -horizontalChange;
-			facing = -1;
-			print(facing);
-		}
-		
-		//if i'm on a wall and going in that direction don't
-		//have any change
-		if(rightWallList.Count != 0 && change.x > 0){
-			change.x = 0;
-		}
-		if(leftWallList.Count != 0 && change.x < 0){
-			change.x = 0;
-		}
-		
-		pos = pos + (change);
-		
-		this.transform.position = pos;
+
+	public void queueJump(){
+		jumpQueued = true;
 	}
-	
-	void handleYMovement (){
-		if(jumpQueued && groundList.Count != 0){
-			Jump ();
-			jumpQueued = false;
-		}
-		else{
-			jumpQueued = false;
-		}
-	}
-	
+
 	void FixedUpdate(){
 		if(playing){
-			handleXMovement();
-			handleYMovement();
+			//Handle the x movement
+			controlledVelocity.x = 4.0f * inputDevice.LeftStickX.Value;
 			
+			//Apply walls
+			if(rightWallList.Count != 0 && controlledVelocity.x > 0){
+				controlledVelocity.x = 0;
+			}
+			if(leftWallList.Count != 0 && controlledVelocity.x < 0){
+				controlledVelocity.x = 0;
+			}
+
+			//Handle the y movement / jumping
+			if(jumpQueued && groundList.Count != 0){
+				Jump ();
+				jumpQueued = false;
+			}
+			else{
+				jumpQueued = false;
+			}
+
+			if(groundList.Count == 0){
+				controlledVelocity += playerGravity;
+			} else if (velocity.y <= 0.0f){
+				velocity.y = 0.0f;
+			}
+		
+
+			//Decay forcedVelocity
+			forcedVelFrameCounter++;
+			if(forcedVelFrameCounter >= 25){
+				forcedVelocity *= .5f;
+				forcedVelFrameCounter = 0;
+			}
+
+
 			Vector3 pos = this.transform.position;
 			float oldXSpeed = velocity.x;
-			
+
+			velocity = forcedVelocity + controlledVelocity;
+
 			//Apply gravity if the player is not on a platform.
-			if(groundList.Count == 0){
-				velocity += playerGravity * Time.deltaTime;
-			}
-			
-			//I moved this to the handle X function.  Also am not modifying
-			//x velocity anymore becaues the player is moving based on input
-			//so it won't have a velocity to keep moving.  I'm just going to
-			//check if's encountered a wall and just set it's x change to 0.
-			/*
-			if(rightWallList.Count != 0 && velocity.x > 0){
-				velocity.x = 0;
-			}
-			if(leftWallList.Count != 0 && velocity.x < 0){
-				velocity.x = 0;
-			}
-			*/
+	
 			//applies the gravity here
 			pos += velocity * Time.deltaTime;
 			this.transform.position = pos;
-			currentLinePosition = pos;
-			velocity.x = oldXSpeed;
-			
-			//don't need this anymore I think
-			/*
-			if (this && LevelLoader.ll && this.transform.position.y <= -4.0f) {
-				RestoreDefaults();
-			}
-			*/
+			//velocity.x = oldXSpeed;
+	
 		}
 		prevGroundLeftCornerPos = curGroundLeftCornerPos;
 		prevGroundRightCornerPos = curGroundRightCornerPos;
@@ -195,149 +189,12 @@ public class PlayerObject : MonoBehaviour {
 		hitGroundTimer--;
 	}
 	
-	public void OnTriggerEnter(Collider other){
-		
-		if(!other.GetComponent<GroundObject>()){
-			return;
-		}
-		if(groundList.Contains(other)){
-			return;
-		}
-		if(rightWallList.Contains(other)){
-			return;
-		}
-		if(leftWallList.Contains(other)){
-			return;
-		}
-		
-		if(playerGravity.y < 0){
-			gravityDirection = -1;
-		} else {
-			gravityDirection = 1;
-		}
-		
-		
-		float groundYPos = other.transform.position.y + (other.transform.localScale.y / 2.0f * -gravityDirection);
-		float ceilYPos = other.transform.position.y + (other.transform.localScale.y / 2.0f * gravityDirection);
-		
-		float leftSideWallPos = other.transform.position.x - (other.transform.localScale.x / 2.0f);
-		float rightSideWallPos = other.transform.position.x + (other.transform.localScale.x / 2.0f);
-		
-		bool shouldMoveOnTop = false;
-		bool shouldBounceOffBottom = false;
-		bool shouldAssignAsLeftWall = false;
-		bool shouldAssignAsRightWall = false;
-		
-		//This section 
-		if (IsInside (other.collider, curGroundLeftCornerPos) && IsInside (other.collider, curGroundRightCornerPos)) {
-			shouldMoveOnTop = true;
-		} else if (IsInside (other.collider, curGroundLeftCornerPos)) {
-			Vector3 cornerPosChangeDirection = curGroundLeftCornerPos - prevGroundLeftCornerPos;
-			
-			RaycastHit hitInfo;
-			Physics.Raycast(prevGroundLeftCornerPos, cornerPosChangeDirection, out hitInfo);
-			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, 0.3f)){
-				shouldMoveOnTop = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, 0.3f)){
-				shouldAssignAsLeftWall = true;
-			}
-			
-		} else if (IsInside (other.collider, curGroundRightCornerPos)) {
-			Vector3 cornerPosChangeDirection = curGroundRightCornerPos - prevGroundRightCornerPos;
-			
-			RaycastHit hitInfo;
-			Physics.Raycast(prevGroundRightCornerPos, cornerPosChangeDirection, out hitInfo);
-			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, 0.3f)){
-				shouldMoveOnTop = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, 0.3f)){
-				shouldAssignAsRightWall = true;
-			}
-		} else if (IsInside (other.collider, curTopLeftCornerPos) && IsInside (other.collider, curTopRightCornerPos)) {
-			shouldBounceOffBottom = true;
-		} else if (IsInside (other.collider, curTopLeftCornerPos)) {
-			//Only the left corner is in the ground
-			Vector3 cornerPosChangeDirection = curTopLeftCornerPos - prevTopLeftCornerPos;
-			
-			RaycastHit hitInfo;
-			Physics.Raycast(prevTopLeftCornerPos, cornerPosChangeDirection, out hitInfo);
-			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, 0.3f)){
-				shouldBounceOffBottom = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, 0.3f)){
-				shouldAssignAsLeftWall = true;
-			}
-		} else if (IsInside (other.collider, curTopRightCornerPos)) {
-			//Only the left corner is in the ground
-			Vector3 cornerPosChangeDirection = curTopRightCornerPos - prevTopRightCornerPos;
-			
-			RaycastHit hitInfo;
-			Physics.Raycast(prevTopRightCornerPos, cornerPosChangeDirection, out hitInfo);
-			
-			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, 0.3f)){
-				shouldBounceOffBottom = true;
-			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, 0.3f)){
-				shouldAssignAsRightWall = true;
-			}
-		}
-		
-		if (shouldMoveOnTop) {
-			if(Mathf.Sign(velocity.y) != Mathf.Sign(gravityDirection))
-				return;
-			
-			
-			if (Mathf.Approximately (other.bounds.min.x, this.collider.bounds.max.x)
-			    || Mathf.Approximately (other.bounds.max.x, this.collider.bounds.min.x)) {
-				return;
-			}
-			HitGround ();
-			if(!groundList.Contains(other)){
-				groundList.Add(other);
-			}
-			float radiAdd = (this.transform.lossyScale.y) / 2.0f + (other.transform.localScale.y) / 2.0f;
-			Vector3 oldPos = this.transform.position;
-			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
-			Vector3 groundPos = other.transform.position;
-			newPos.y = groundPos.y + (radiAdd * -gravityDirection);
-			this.transform.position = newPos;
-		} 
-		else if (shouldAssignAsLeftWall){
-			//currentLeftWall = other.gameObject.GetComponent<SolidObject>();
-			if(!leftWallList.Contains(other)){
-				leftWallList.Add(other);
-			}
-			float radiAdd = (this.transform.lossyScale.x) / 2.0f + (other.transform.localScale.x) / 2.0f;
-			Vector3 oldPos = this.transform.position;
-			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
-			Vector3 groundPos = other.transform.position;
-			newPos.x = groundPos.x + radiAdd;
-			this.transform.position = newPos;
-		} 
-		else if (shouldAssignAsRightWall){
-			//currentRightWall = other.gameObject.GetComponent<SolidObject>();
-			if(!rightWallList.Contains(other)){
-				rightWallList.Add(other);
-			}
-			float radiAdd = (this.transform.lossyScale.x) / 2.0f + (other.transform.localScale.x) / 2.0f;
-			Vector3 oldPos = this.transform.position;
-			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
-			Vector3 groundPos = other.transform.position;
-			newPos.x = groundPos.x - radiAdd;
-			this.transform.position = newPos;
-		} 
-		else if (shouldBounceOffBottom){
-			float radiAdd = (this.transform.lossyScale.y) / 2.0f + (other.transform.localScale.y) / 2.0f;
-			Vector3 oldPos = this.transform.position;
-			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
-			Vector3 groundPos = other.transform.position;
-			newPos.y = groundPos.y + (radiAdd * gravityDirection) + (0.05f * gravityDirection);
-			velocity.y = 0.0f;
-			this.transform.position = newPos;
-		}
+	void OnTriggerEnter(Collider other){
+		HandleBulletCollision (other);
+		HandleGroundCollision (other);
+		HandleSpikeCollision (other);
 	}
-	
-	
+
 	public void HitGround(){
 		if (hitGroundTimer > 0) {
 			return;
@@ -359,11 +216,183 @@ public class PlayerObject : MonoBehaviour {
 			leftWallList.Remove(other);
 		}
 	}
+
+	void HandleBulletCollision(Collider other){
+		BulletScript bs = other.GetComponent<BulletScript> ();
+		if(bs && (bs.getPlayerRef() != this)){
+			float pushPullScaling = 5.0f;
+			if(bs.getBulletType() == bulletType.PULL){
+				Vector3 diff = transform.position - bs.getPlayerRef().transform.position;
+				diff = diff.normalized * pushPullScaling;
+				//this.velocity += new Vector3(diff.x, diff.y, diff.z);
+				forcedVelocity += new Vector3(diff.x, diff.y, diff.z);
+				Destroy(other.gameObject);
+			}
+			else if(bs.getBulletType() == bulletType.PUSH){
+				Vector3 diff = bs.getPlayerRef().transform.position - transform.position;
+				diff = diff.normalized * pushPullScaling;
+				//this.velocity += new Vector3(diff.x, diff.y * 2, diff.z);
+				forcedVelocity += new Vector3(diff.x, diff.y * 2, diff.z);
+				Destroy(other.gameObject);	
+			}
+			else if(bs.getBulletType() == bulletType.JUMP){
+				this.velocity += new Vector3(0,16,0);
+				Destroy(other.gameObject);
+			}
+		}
+	}
+
+	void HandleGroundCollision(Collider other){
+		if(!other.GetComponent<GroundObject>()){
+			return;
+		}
+		if(groundList.Contains(other)){
+			return;
+		}
+		if(rightWallList.Contains(other)){
+			return;
+		}
+		if(leftWallList.Contains(other)){
+			return;
+		}
+		
+		
+		float groundYPos = other.transform.position.y + (other.transform.localScale.y / 2.0f * 1);
+		float ceilYPos = other.transform.position.y + (other.transform.localScale.y / 2.0f * -1);
+		
+		float leftSideWallPos = other.transform.position.x - (other.transform.localScale.x / 2.0f);
+		float rightSideWallPos = other.transform.position.x + (other.transform.localScale.x / 2.0f);
+		
+		float approxVal = 0.1f;
+		
+		bool shouldMoveOnTop = false;
+		bool shouldBounceOffBottom = false;
+		bool shouldAssignAsLeftWall = false;
+		bool shouldAssignAsRightWall = false;
+		
+		//This section 
+		if (IsInside (other.collider, curGroundLeftCornerPos) && IsInside (other.collider, curGroundRightCornerPos)) {
+			shouldMoveOnTop = true;
+		} else if (IsInside (other.collider, curGroundLeftCornerPos)) {
+			Vector3 cornerPosChangeDirection = curGroundLeftCornerPos - prevGroundLeftCornerPos;
+			
+			RaycastHit hitInfo;
+			Physics.Raycast(prevGroundLeftCornerPos, cornerPosChangeDirection, out hitInfo);
+			
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, approxVal)){
+				shouldMoveOnTop = true;
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, approxVal)){
+				shouldAssignAsLeftWall = true;
+			}
+			
+		} else if (IsInside (other.collider, curGroundRightCornerPos)) {
+			Vector3 cornerPosChangeDirection = curGroundRightCornerPos - prevGroundRightCornerPos;
+			
+			RaycastHit hitInfo;
+			Physics.Raycast(prevGroundRightCornerPos, cornerPosChangeDirection, out hitInfo);
+			
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, groundYPos, approxVal)){
+				shouldMoveOnTop = true;
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, approxVal)){
+				shouldAssignAsRightWall = true;
+			}
+		} else if (IsInside (other.collider, curTopLeftCornerPos) && IsInside (other.collider, curTopRightCornerPos)) {
+			shouldBounceOffBottom = true;
+		} else if (IsInside (other.collider, curTopLeftCornerPos)) {
+			//Only the left corner is in the ground
+			Vector3 cornerPosChangeDirection = curTopLeftCornerPos - prevTopLeftCornerPos;
+			
+			RaycastHit hitInfo;
+			Physics.Raycast(prevTopLeftCornerPos, cornerPosChangeDirection, out hitInfo);
+			
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, approxVal)){
+				shouldBounceOffBottom = true;
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, rightSideWallPos, approxVal)){
+				shouldAssignAsLeftWall = true;
+			}
+		} else if (IsInside (other.collider, curTopRightCornerPos)) {
+			//Only the left corner is in the ground
+			Vector3 cornerPosChangeDirection = curTopRightCornerPos - prevTopRightCornerPos;
+			
+			RaycastHit hitInfo;
+			Physics.Raycast(prevTopRightCornerPos, cornerPosChangeDirection, out hitInfo);
+			
+			if(UtilityFunctions.isApproximate(hitInfo.point.y, ceilYPos, approxVal)){
+				shouldBounceOffBottom = true;
+			} else if (UtilityFunctions.isApproximate(hitInfo.point.x, leftSideWallPos, approxVal)){
+				shouldAssignAsRightWall = true;
+			}
+		}
+		
+		if (shouldMoveOnTop && (Mathf.Sign(velocity.y) == -1)) {
+			if (Mathf.Approximately (other.bounds.min.x, this.collider.bounds.max.x)
+			    || Mathf.Approximately (other.bounds.max.x, this.collider.bounds.min.x)) {
+				return;
+			}
+			//ONLY HIT GROUND IF VEL IS GOING DOWN
+			HitGround ();
+			if(!groundList.Contains(other)){
+				groundList.Add(other);
+			}
+			float radiAdd = (this.transform.lossyScale.y) / 2.0f + (other.transform.localScale.y) / 2.0f;
+			Vector3 oldPos = this.transform.position;
+			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
+			Vector3 groundPos = other.transform.position;
+			newPos.y = groundPos.y + radiAdd;
+			this.transform.position = newPos;
+		} 
+		else if (shouldAssignAsLeftWall){
+			if(!leftWallList.Contains(other)){
+				leftWallList.Add(other);
+			}
+			float radiAdd = (this.transform.lossyScale.x) / 2.0f + (other.transform.localScale.x) / 2.0f;
+			Vector3 oldPos = this.transform.position;
+			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
+			Vector3 groundPos = other.transform.position;
+			newPos.x = groundPos.x + radiAdd + 0.01f;
+			this.transform.position = newPos;
+		} 
+		else if (shouldAssignAsRightWall){
+			//currentRightWall = other.gameObject.GetComponent<SolidObject>();
+			if(!rightWallList.Contains(other)){
+				rightWallList.Add(other);
+			}
+			float radiAdd = (this.transform.lossyScale.x) / 2.0f + (other.transform.localScale.x) / 2.0f;
+			Vector3 oldPos = this.transform.position;
+			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
+			Vector3 groundPos = other.transform.position;
+			newPos.x = groundPos.x - radiAdd - 0.01f;
+			this.transform.position = newPos;
+		} 
+		else if (shouldBounceOffBottom && (Mathf.Sign(velocity.y) == 1)){
+			float radiAdd = (this.transform.lossyScale.y) / 2.0f + (other.transform.localScale.y) / 2.0f;
+			Vector3 oldPos = this.transform.position;
+			Vector3 newPos = new Vector3 (oldPos.x, oldPos.y, oldPos.z);
+			Vector3 groundPos = other.transform.position;
+			newPos.y = groundPos.y - radiAdd;// - 0.05f;
+			velocity.y = 0.0f;
+			this.transform.position = newPos;
+		}
+	}
+
+	void HandleSpikeCollision(Collider other){
+		if (other.gameObject.tag == "spike") {
+			Die ();
+		} else {
+			return;
+		}
+	}
+
+	void Die(){
+		this.transform.position = spawnPos;
+		RestoreDefaults ();
+	}
 	
 	//ACTIONS
 	
 	public void Jump(){
-		velocity.y = jumpSpeed;
+		print ("jumping...");
+		controlledVelocity.y += jumpSpeed;
 	}
 	
 	public void Reverse(){
@@ -375,40 +404,38 @@ public class PlayerObject : MonoBehaviour {
 		rightWallList = new List<Collider> ();
 		leftWallList = new List<Collider> ();
 		velocity = Vector3.zero;
-		
-		//velocity.x = xSpeed;
-		//playing = false;
+
 		hitGroundTimer = 0;
-		currentLinePosition = this.transform.position;	
 	}
-	
-	
+
+
+
 	//BOOKKEEPING
 	private Vector3 getGroundLeftCorner(){
 		Vector3 pos = this.transform.position;
 		pos.x -= (this.transform.localScale.x) / 2.0f;
-		pos.y += ((this.transform.localScale.y) / 2.0f) * gravityDirection;
+		pos.y += ((this.transform.localScale.y) / 2.0f) * -1;
 		return pos;
 	}
 	
 	private Vector3 getGroundRightCorner(){
 		Vector3 pos = this.transform.position;
 		pos.x += (this.transform.localScale.x) / 2.0f;
-		pos.y += ((this.transform.localScale.y) / 2.0f) * gravityDirection;
+		pos.y += ((this.transform.localScale.y) / 2.0f) * -1;
 		return pos;
 	}
 	
 	private Vector3 getTopLeftCorner(){
 		Vector3 pos = this.transform.position;
 		pos.x -= (this.transform.localScale.x) / 2.0f;
-		pos.y += ((this.transform.localScale.y) / 2.0f) * -gravityDirection;
+		pos.y += ((this.transform.localScale.y) / 2.0f);
 		return pos;
 	}
 	
 	private Vector3 getTopRightCorner(){
 		Vector3 pos = this.transform.position;
 		pos.x += (this.transform.localScale.x) / 2.0f;
-		pos.y += ((this.transform.localScale.y) / 2.0f) * -gravityDirection;
+		pos.y += ((this.transform.localScale.y) / 2.0f);
 		return pos;
 	}
 	
